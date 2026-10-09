@@ -4,64 +4,54 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using BepInEx;
 using BepInEx.Logging;
 
 namespace ItemAnnouncer
 {
     internal static class TtsClient
     {
-        private const string SpeakerExeName = "ItemAnnouncer.Speaker.exe";
+        private const string HostScriptName = "ItemAnnouncer.Speaker.ps1";
         private const int MaxStartFailures = 5;
 
         private static readonly object IoLock = new object();
 
         private static ManualLogSource _log;
-        private static string _exePath;
+        private static string _scriptPath;
         private static Process _process;
         private static Stream _stdin;
-
-        private static string _voice = "";
-        private static int _rate;
-        private static int _volume = 100;
         private static int _startFailures;
 
         internal static void Initialize(ManualLogSource log, string voice, int rate, int volume)
         {
             _log = log;
-            _voice = voice ?? "";
-            _rate = Clamp(rate, -10, 10);
-            _volume = Clamp(volume, 0, 100);
-
             string assemblyPath = Assembly.GetExecutingAssembly().Location;
             string folder = string.IsNullOrEmpty(assemblyPath) ? null : Path.GetDirectoryName(assemblyPath);
-            _exePath = string.IsNullOrEmpty(folder) ? null : Path.Combine(folder, SpeakerExeName);
+            _scriptPath = string.IsNullOrEmpty(folder) ? null : Path.Combine(folder, HostScriptName);
 
-            if (_exePath == null || !File.Exists(_exePath))
+            if (_scriptPath == null || !File.Exists(_scriptPath))
             {
-                LogError("Alto-falante nao encontrado (esperado em: " + (_exePath ?? "?") + "). A fala nao vai funcionar.");
+                LogError("Script do alto-falante nao encontrado: " + (_scriptPath ?? "?"));
                 return;
             }
 
-            StartProcess();
+            if (EnsureProcess())
+            {
+                ApplySettings(voice, rate, volume);
+            }
         }
 
         internal static void ApplySettings(string voice, int rate, int volume)
         {
-            _voice = voice ?? "";
-            _rate = Clamp(rate, -10, 10);
-            _volume = Clamp(volume, 0, 100);
-
-            if (_process == null || _process.HasExited)
+            if (!EnsureProcess())
             {
                 return;
             }
 
             try
             {
-                SendRaw("VOICE " + _voice);
-                SendRaw("RATE " + _rate);
-                SendRaw("VOLUME " + _volume);
+                SendRaw("VOICE " + CleanArgument(voice));
+                SendRaw("RATE " + Clamp(rate, -10, 10));
+                SendRaw("VOLUME " + Clamp(volume, 0, 100));
             }
             catch (Exception ex)
             {
@@ -71,20 +61,14 @@ namespace ItemAnnouncer
 
         internal static void Speak(string text)
         {
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                return;
-            }
-
-            text = text.Replace('\r', ' ').Replace('\n', ' ');
-            if (!EnsureProcess())
+            if (string.IsNullOrWhiteSpace(text) || !EnsureProcess())
             {
                 return;
             }
 
             try
             {
-                SendRaw("SAY " + text);
+                SendRaw("SAY " + text.Replace('\r', ' ').Replace('\n', ' '));
             }
             catch (Exception ex)
             {
@@ -96,7 +80,6 @@ namespace ItemAnnouncer
         {
             Process process = _process;
             _process = null;
-
             if (process == null)
             {
                 return;
@@ -104,28 +87,20 @@ namespace ItemAnnouncer
 
             try
             {
-                lock (IoLock)
-                {
-                    WriteUnlocked("QUIT");
-                }
-                if (!process.WaitForExit(800))
+                SendRaw("QUIT");
+                if (!process.WaitForExit(1200))
                 {
                     process.Kill();
                 }
             }
             catch
             {
-                try
-                {
-                    process.Kill();
-                }
-                catch
-                {
-                }
+                try { process.Kill(); } catch { }
             }
             finally
             {
                 _stdin = null;
+                process.Dispose();
             }
         }
 
@@ -140,12 +115,16 @@ namespace ItemAnnouncer
 
         private static bool StartProcess()
         {
-            if (_startFailures >= MaxStartFailures)
+            if (_startFailures >= MaxStartFailures || string.IsNullOrEmpty(_scriptPath))
             {
                 return false;
             }
-            if (_exePath == null || !File.Exists(_exePath))
+
+            string windowsDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            string powershellPath = Path.Combine(windowsDirectory, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+            if (!File.Exists(powershellPath))
             {
+                LogError("Windows PowerShell 5.1 nao foi encontrado.");
                 return false;
             }
 
@@ -153,8 +132,9 @@ namespace ItemAnnouncer
             {
                 var info = new ProcessStartInfo
                 {
-                    FileName = _exePath,
-                    WorkingDirectory = Path.GetDirectoryName(_exePath),
+                    FileName = powershellPath,
+                    Arguments = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -STA -File \"" + _scriptPath + "\"",
+                    WorkingDirectory = Path.GetDirectoryName(_scriptPath),
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardInput = true,
@@ -165,18 +145,12 @@ namespace ItemAnnouncer
                 var process = new Process { StartInfo = info, EnableRaisingEvents = true };
                 process.Exited += OnProcessExited;
                 process.Start();
-
                 _process = process;
                 _stdin = process.StandardInput.BaseStream;
 
                 StartReadLoop(process.StandardOutput.BaseStream, false);
                 StartReadLoop(process.StandardError.BaseStream, true);
-
-                SendRaw("VOICE " + _voice);
-                SendRaw("RATE " + _rate);
-                SendRaw("VOLUME " + _volume);
-
-                LogInfo("Alto-falante iniciado.");
+                LogInfo("Host de fala do Windows iniciado.");
                 return true;
             }
             catch (Exception ex)
@@ -184,7 +158,7 @@ namespace ItemAnnouncer
                 _startFailures++;
                 _process = null;
                 _stdin = null;
-                LogError("Falha ao iniciar o alto-falante: " + ex.Message);
+                LogError("Falha ao iniciar o host de fala: " + ex.Message);
                 return false;
             }
         }
@@ -193,7 +167,7 @@ namespace ItemAnnouncer
         {
             _process = null;
             _stdin = null;
-            LogWarning("O alto-falante foi encerrado. Ele sera reiniciado no proximo anuncio.");
+            LogWarning("O host de fala foi encerrado; sera reiniciado no proximo anuncio.");
         }
 
         private static void HandleFailure(Exception ex)
@@ -218,19 +192,19 @@ namespace ItemAnnouncer
         {
             lock (IoLock)
             {
-                WriteUnlocked(line);
+                if (_stdin == null)
+                {
+                    throw new IOException("O host de fala nao esta conectado.");
+                }
+                byte[] bytes = Encoding.UTF8.GetBytes(line + "\n");
+                _stdin.Write(bytes, 0, bytes.Length);
+                _stdin.Flush();
             }
         }
 
-        private static void WriteUnlocked(string line)
+        private static string CleanArgument(string value)
         {
-            if (_stdin == null)
-            {
-                return;
-            }
-            byte[] bytes = Encoding.UTF8.GetBytes(line + "\n");
-            _stdin.Write(bytes, 0, bytes.Length);
-            _stdin.Flush();
+            return (value ?? "").Replace('\r', ' ').Replace('\n', ' ');
         }
 
         private static void StartReadLoop(Stream stream, bool isError)
@@ -244,14 +218,8 @@ namespace ItemAnnouncer
                         string line;
                         while ((line = reader.ReadLine()) != null)
                         {
-                            if (isError)
-                            {
-                                LogWarning("[Speaker] " + line);
-                            }
-                            else
-                            {
-                                LogInfo("[Speaker] " + line);
-                            }
+                            if (isError) LogWarning("[PowerShell] " + line);
+                            else LogInfo("[PowerShell] " + line);
                         }
                     }
                 }
@@ -270,26 +238,17 @@ namespace ItemAnnouncer
 
         private static void LogInfo(string message)
         {
-            if (_log != null)
-            {
-                _log.LogInfo(message);
-            }
+            if (_log != null) _log.LogInfo(message);
         }
 
         private static void LogWarning(string message)
         {
-            if (_log != null)
-            {
-                _log.LogWarning(message);
-            }
+            if (_log != null) _log.LogWarning(message);
         }
 
         private static void LogError(string message)
         {
-            if (_log != null)
-            {
-                _log.LogError(message);
-            }
+            if (_log != null) _log.LogError(message);
         }
     }
 }

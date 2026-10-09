@@ -1,6 +1,6 @@
 {
   "name": "VisualImpairmentSupport",
-  "version_number": "1.1.1",
+  "version_number": "1.1.2",
   "website_url": "https://github.com/pedrodardengo/ValheimMods/tree/master/VisualImpairmentSupport",
   "description": "Adds inventory item outlines and announces item names and stack counts by voice.",
   "dependencies": [

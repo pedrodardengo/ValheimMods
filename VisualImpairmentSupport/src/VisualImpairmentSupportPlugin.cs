@@ -8,7 +8,7 @@ public sealed class VisualImpairmentSupportPlugin : BaseUnityPlugin
 {
     private const string PluginGuid = "com.visualimpairmentsupport.plugin";
     private const string PluginName = "Visual Impairment Support";
-    private const string PluginVersion = "1.1.1";
+    private const string PluginVersion = "1.1.2";
     private Harmony _harmony;
 
     private void Awake()

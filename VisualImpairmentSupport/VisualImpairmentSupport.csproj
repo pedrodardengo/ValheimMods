@@ -3,7 +3,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>VisualImpairmentSupport</AssemblyName>
     <RootNamespace>VisualImpairmentSupport</RootNamespace>
-    <Version>1.1.1</Version>
+    <Version>1.1.2</Version>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>https://api.nuget.org/v3/index.json;https://nuget.bepinex.dev/v3/index.json;https://nuget.samboy.dev/v3/index.json</RestoreAdditionalProjectSources>
     <ValheimDir Condition="'$(ValheimDir)' == '' and '$(VALHEIM_DIR)' != ''">$(VALHEIM_DIR)</ValheimDir>
@@ -19,8 +19,8 @@
 
   <ItemGroup>
     <Compile Remove="src\ItemAnnouncement\Speaker\**\*.cs" />
-    <None Update="src\ItemAnnouncement\Speaker\ItemAnnouncer.Speaker.exe"
-          Link="ItemAnnouncer.Speaker.exe"
+    <None Update="src\ItemAnnouncement\Speaker\ItemAnnouncer.Speaker.ps1"
+          Link="ItemAnnouncer.Speaker.ps1"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>

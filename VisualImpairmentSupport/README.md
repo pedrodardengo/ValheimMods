@@ -10,7 +10,7 @@ The mod adds a red outline to inventory slots containing weapons, armor, or tool
 ### Item type and quantity announcer
 Click the middle mouse button (M3) over an item in the player inventory or a container to hear its localized name and stack count using Windows text-to-speech. The voice, speed, volume, M3 toggle, and spoken text format can be configured in the BepInEx configuration file. The optional total-count format includes matching items in that inventory or container.
 
-The voice feature uses the bundled `ItemAnnouncer.Speaker.exe` helper and Windows Speech. Keep the helper next to `VisualImpairmentSupport.dll` in the plugin folder.
+The voice feature uses Windows PowerShell 5.1 and Windows Speech. No custom executable is bundled; the mod starts the PowerShell installation included with Windows and uses voices installed in the operating system.
 
 ## Inventory
 
