@@ -10,7 +10,7 @@ public sealed class TrueWeatherSwampPlugin : BaseUnityPlugin
 {
     private const string PluginGuid = "com.trueweatherswamp.plugin";
     private const string PluginName = "True Weather Swamp";
-    private const string PluginVersion = "1.1.4";
+    private const string PluginVersion = "1.1.5";
 
     internal static ManualLogSource ModLogger;
 

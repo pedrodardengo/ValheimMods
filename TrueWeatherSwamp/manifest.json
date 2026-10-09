@@ -1,0 +1,9 @@
+{
+  "name": "TrueWeatherSwamp",
+  "version_number": "1.1.5",
+  "website_url": "https://github.com/pedrodardengo/ValheimMods/tree/master/TrueWeatherSwamp",
+  "description": "Restricts Swamp weather to clear skies (67%) and SwampRain (33%).",
+  "dependencies": [
+    "denikson-BepInExPack_Valheim-5.4.2202"
+  ]
+}
