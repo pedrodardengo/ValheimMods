@@ -1,0 +1,9 @@
+{
+  "name": "VisualImpairmentSupport",
+  "version_number": "1.0.4",
+  "website_url": "https://github.com/pedrodardengo/ValheimMods/tree/master/VisualImpairmentSupport",
+  "description": "Adds colored outlines to inventory slots based on item type.",
+  "dependencies": [
+    "denikson-BepInExPack_Valheim-5.4.2202"
+  ]
+}
