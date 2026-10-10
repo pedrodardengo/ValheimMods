@@ -1,8 +1,8 @@
 {
   "name": "VisualImpairmentSupport",
-  "version_number": "1.2.1",
+  "version_number": "1.2.0",
   "website_url": "https://github.com/pedrodardengo/ValheimMods/tree/master/VisualImpairmentSupport",
-  "description": "Adds inventory item outlines and announces item names and stack counts by voice.",
+  "description": "Adds inventory item outlines and voice announcements for inventory items and crafting recipes.",
   "dependencies": [
     "denikson-BepInExPack_Valheim-5.4.2202"
   ]

@@ -1,4 +1,5 @@
 using HarmonyLib;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -22,7 +23,12 @@ namespace ItemAnnouncer
             }
 
             InventoryGrid containerGrid = Traverse.Create(__instance).Field("m_containerGrid").GetValue<InventoryGrid>();
-            TryAnnounceHoveredItem(containerGrid);
+            if (TryAnnounceHoveredItem(containerGrid))
+            {
+                return;
+            }
+
+            TryAnnounceHoveredRecipe(__instance);
         }
 
         private static bool TryAnnounceHoveredItem(InventoryGrid grid)
@@ -61,6 +67,36 @@ namespace ItemAnnouncer
             }
 
             return false;
+        }
+
+        private static void TryAnnounceHoveredRecipe(InventoryGui gui)
+        {
+            IEnumerable recipes = Traverse.Create(gui).Field("m_availableRecipes").GetValue<IEnumerable>();
+            if (recipes == null)
+            {
+                return;
+            }
+
+            foreach (object recipeEntry in recipes)
+            {
+                if (recipeEntry == null)
+                {
+                    continue;
+                }
+
+                GameObject element = Traverse.Create(recipeEntry).Property("InterfaceElement").GetValue<GameObject>();
+                RectTransform rect = element == null ? null : element.transform as RectTransform;
+                if (rect == null || !rect.gameObject.activeInHierarchy ||
+                    !RectTransformUtility.RectangleContainsScreenPoint(rect, Input.mousePosition))
+                {
+                    continue;
+                }
+
+                Recipe recipe = Traverse.Create(recipeEntry).Property("Recipe").GetValue<Recipe>();
+                ItemDrop.ItemData item = Traverse.Create(recipeEntry).Property("ItemData").GetValue<ItemDrop.ItemData>();
+                Announcer.OnRecipeMiddleClick(recipe, item);
+                return;
+            }
         }
     }
 }

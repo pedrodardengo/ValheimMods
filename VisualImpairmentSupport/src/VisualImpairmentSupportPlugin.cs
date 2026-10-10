@@ -11,7 +11,7 @@ public sealed class VisualImpairmentSupportPlugin : BaseUnityPlugin
 {
     private const string PluginGuid = "com.visualimpairmentsupport.plugin";
     private const string PluginName = "Visual Impairment Support";
-    private const string PluginVersion = "1.2.1";
+    private const string PluginVersion = "1.2.0";
     private Harmony _harmony;
     internal static ConfigEntry<int> HighlightRed;
     internal static ConfigEntry<int> HighlightGreen;
@@ -38,7 +38,7 @@ public sealed class VisualImpairmentSupportPlugin : BaseUnityPlugin
         ItemAnnouncer.Plugin.Initialize(this, Logger);
         _harmony = new Harmony(PluginGuid);
         _harmony.PatchAll();
-        Logger.LogInfo("Installed inventory item slot color outlines and item announcements.");
+        Logger.LogInfo("Installed inventory item slot color outlines and item/recipe announcements.");
     }
 
     private void OnDestroy()
