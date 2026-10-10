@@ -9,8 +9,6 @@ namespace VisualImpairmentSupport;
 internal static class InventoryGridUpdateGuiPatch
 {
     private const string BorderObjectName = "VisualImpairmentSupportBorder";
-    private static readonly Color ItemBorderColor = new Color(1f, 0.12f, 0.12f, 1f);
-
     private static IEnumerable<MethodBase> TargetMethods()
     {
         foreach (MethodInfo method in AccessTools.GetDeclaredMethods(typeof(InventoryGrid)))
@@ -72,7 +70,11 @@ internal static class InventoryGridUpdateGuiPatch
             border.transform.SetAsLastSibling();
             if (TryGetColor(item))
             {
-                border.color = ItemBorderColor;
+                border.color = new Color32(
+                    (byte)VisualImpairmentSupportPlugin.HighlightRed.Value,
+                    (byte)VisualImpairmentSupportPlugin.HighlightGreen.Value,
+                    (byte)VisualImpairmentSupportPlugin.HighlightBlue.Value,
+                    255);
                 border.enabled = true;
                 border.SetVerticesDirty();
             }

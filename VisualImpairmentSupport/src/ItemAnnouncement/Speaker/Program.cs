@@ -79,10 +79,6 @@ namespace ItemAnnouncer.Speaker
                     _synth.SpeakAsync(argument);
                     break;
 
-                case "VOICE":
-                    SelectVoice(argument);
-                    break;
-
                 case "RATE":
                     _synth.Rate = Clamp(ParseInt(argument, 0), -10, 10);
                     break;
@@ -118,37 +114,6 @@ namespace ItemAnnouncer.Speaker
             Write("VOICE (padrao do sistema)");
         }
 
-        private static void SelectVoice(string fragment)
-        {
-            if (string.IsNullOrWhiteSpace(fragment))
-            {
-                SelectDefaultVoice();
-                return;
-            }
-
-            foreach (InstalledVoice installed in _synth.GetInstalledVoices())
-            {
-                VoiceInfo info = installed.VoiceInfo;
-                if (!installed.Enabled || info == null)
-                {
-                    continue;
-                }
-
-                bool match = (!string.IsNullOrEmpty(info.Name) &&
-                              info.Name.IndexOf(fragment, StringComparison.OrdinalIgnoreCase) >= 0) ||
-                             (info.Culture != null &&
-                              info.Culture.Name.IndexOf(fragment, StringComparison.OrdinalIgnoreCase) >= 0);
-
-                if (match)
-                {
-                    _synth.SelectVoice(info.Name);
-                    Write("VOICE " + info.Name);
-                    return;
-                }
-            }
-
-            Write("ERR voice " + fragment);
-        }
 
         private static void WarmUp()
         {

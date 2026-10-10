@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -11,6 +12,7 @@ namespace ItemAnnouncer
     internal static class TtsClient
     {
         private const string HostScriptName = "ItemAnnouncer.Speaker.ps1";
+        internal const string AutomaticVoice = "Automatic (Portuguese if available)";
         private const int MaxStartFailures = 5;
 
         private static readonly object IoLock = new object();
@@ -21,12 +23,87 @@ namespace ItemAnnouncer
         private static Stream _stdin;
         private static int _startFailures;
 
-        internal static void Initialize(ManualLogSource log, string voice, int rate, int volume)
+        internal static string[] GetAvailableVoices(ManualLogSource log)
         {
             _log = log;
-            string assemblyPath = Assembly.GetExecutingAssembly().Location;
-            string folder = string.IsNullOrEmpty(assemblyPath) ? null : Path.GetDirectoryName(assemblyPath);
-            _scriptPath = string.IsNullOrEmpty(folder) ? null : Path.Combine(folder, HostScriptName);
+            SetScriptPath();
+
+            var voices = new List<string> { AutomaticVoice };
+            if (string.IsNullOrEmpty(_scriptPath) || !File.Exists(_scriptPath))
+            {
+                return voices.ToArray();
+            }
+
+            string windowsDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            string powershellPath = Path.Combine(windowsDirectory, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+            if (!File.Exists(powershellPath))
+            {
+                LogWarning("Windows PowerShell 5.1 was not found; using automatic voice selection only.");
+                return voices.ToArray();
+            }
+
+            try
+            {
+                var info = new ProcessStartInfo
+                {
+                    FileName = powershellPath,
+                    Arguments = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -STA -File \"" + _scriptPath + "\" -ListVoices",
+                    WorkingDirectory = Path.GetDirectoryName(_scriptPath),
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+
+                using (var process = new Process { StartInfo = info })
+                {
+                    process.Start();
+                    Task<string> outputTask = process.StandardOutput.ReadToEndAsync();
+                    Task<string> errorTask = process.StandardError.ReadToEndAsync();
+                    if (!process.WaitForExit(15000))
+                    {
+                        process.Kill();
+                        LogWarning("Timed out while listing Windows speech voices.");
+                        return voices.ToArray();
+                    }
+
+                    string output = outputTask.GetAwaiter().GetResult();
+                    string error = errorTask.GetAwaiter().GetResult();
+                    if (process.ExitCode != 0)
+                    {
+                        LogWarning("Could not list Windows speech voices: " + error.Trim());
+                        return voices.ToArray();
+                    }
+
+                    foreach (string line in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        try
+                        {
+                            string voice = Encoding.UTF8.GetString(Convert.FromBase64String(line.Trim()));
+                            if (!string.IsNullOrWhiteSpace(voice) && !voices.Contains(voice))
+                            {
+                                voices.Add(voice);
+                            }
+                        }
+                        catch (FormatException)
+                        {
+                            LogWarning("Ignored an invalid voice entry returned by Windows Speech.");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogWarning("Could not list Windows speech voices: " + ex.Message);
+            }
+
+            return voices.ToArray();
+        }
+
+        internal static void Initialize(ManualLogSource log, int rate, int volume, string voice)
+        {
+            _log = log;
+            SetScriptPath();
 
             if (_scriptPath == null || !File.Exists(_scriptPath))
             {
@@ -36,11 +113,11 @@ namespace ItemAnnouncer
 
             if (EnsureProcess())
             {
-                ApplySettings(voice, rate, volume);
+                ApplySettings(rate, volume, voice);
             }
         }
 
-        internal static void ApplySettings(string voice, int rate, int volume)
+        internal static void ApplySettings(int rate, int volume, string voice)
         {
             if (!EnsureProcess())
             {
@@ -111,6 +188,13 @@ namespace ItemAnnouncer
                 return true;
             }
             return StartProcess();
+        }
+
+        private static void SetScriptPath()
+        {
+            string assemblyPath = Assembly.GetExecutingAssembly().Location;
+            string folder = string.IsNullOrEmpty(assemblyPath) ? null : Path.GetDirectoryName(assemblyPath);
+            _scriptPath = string.IsNullOrEmpty(folder) ? null : Path.Combine(folder, HostScriptName);
         }
 
         private static bool StartProcess()
@@ -204,7 +288,7 @@ namespace ItemAnnouncer
 
         private static string CleanArgument(string value)
         {
-            return (value ?? "").Replace('\r', ' ').Replace('\n', ' ');
+            return (value ?? string.Empty).Replace('\r', ' ').Replace('\n', ' ');
         }
 
         private static void StartReadLoop(Stream stream, bool isError)

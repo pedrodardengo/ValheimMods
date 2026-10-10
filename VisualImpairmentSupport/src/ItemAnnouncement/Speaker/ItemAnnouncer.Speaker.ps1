@@ -1,37 +1,54 @@
+param([switch]$ListVoices)
+
 $ErrorActionPreference = 'Stop'
 [Console]::InputEncoding = New-Object System.Text.UTF8Encoding($false)
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 Add-Type -AssemblyName System.Speech
 
+if ($ListVoices) {
+    $voiceCatalog = New-Object System.Speech.Synthesis.SpeechSynthesizer
+    try {
+        foreach ($installedVoice in $voiceCatalog.GetInstalledVoices()) {
+            if ($installedVoice.Enabled) {
+                $displayName = '{0} [{1}]' -f $installedVoice.VoiceInfo.Name, $installedVoice.VoiceInfo.Culture.Name
+                [Console]::Out.WriteLine([Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($displayName)))
+            }
+        }
+    }
+    finally {
+        $voiceCatalog.Dispose()
+    }
+    exit 0
+}
+
 $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
 $synth.SetOutputToDefaultAudioDevice()
 
-function Set-Voice([string]$fragment) {
-    if ([string]::IsNullOrWhiteSpace($fragment)) {
-        $portugueseVoice = $synth.GetInstalledVoices() |
-            Where-Object { $_.Enabled -and $_.VoiceInfo.Culture.Name -eq 'pt-BR' } |
-            Select-Object -First 1
-        if ($null -ne $portugueseVoice) {
-            $synth.SelectVoice($portugueseVoice.VoiceInfo.Name)
-        }
+function Set-DefaultVoice {
+    $portugueseVoice = $synth.GetInstalledVoices() |
+        Where-Object { $_.Enabled -and $_.VoiceInfo.Culture.Name -eq 'pt-BR' } |
+        Select-Object -First 1
+    if ($null -ne $portugueseVoice) {
+        $synth.SelectVoice($portugueseVoice.VoiceInfo.Name)
+    }
+}
+
+function Set-Voice([string]$selection) {
+    if ([string]::IsNullOrWhiteSpace($selection) -or $selection -eq 'Automatic (Portuguese if available)') {
+        Set-DefaultVoice
         return
     }
 
-    $matchingVoice = $synth.GetInstalledVoices() |
-        Where-Object {
-            $_.Enabled -and (
-                $_.VoiceInfo.Name.IndexOf($fragment, [StringComparison]::OrdinalIgnoreCase) -ge 0 -or
-                $_.VoiceInfo.Culture.Name.IndexOf($fragment, [StringComparison]::OrdinalIgnoreCase) -ge 0
-            )
-        } |
-        Select-Object -First 1
+    foreach ($installedVoice in $synth.GetInstalledVoices()) {
+        if (-not $installedVoice.Enabled) { continue }
+        $displayName = '{0} [{1}]' -f $installedVoice.VoiceInfo.Name, $installedVoice.VoiceInfo.Culture.Name
+        if ($displayName -eq $selection) {
+            $synth.SelectVoice($installedVoice.VoiceInfo.Name)
+            return
+        }
+    }
 
-    if ($null -ne $matchingVoice) {
-        $synth.SelectVoice($matchingVoice.VoiceInfo.Name)
-    }
-    else {
-        [Console]::Error.WriteLine("Voz nao encontrada: $fragment. Sera usada a voz padrao do Windows.")
-    }
+    Set-DefaultVoice
 }
 
 function Handle-Command([string]$line) {
@@ -46,13 +63,13 @@ function Handle-Command([string]$line) {
     }
 
     switch ($command) {
+        'VOICE' { Set-Voice $argument }
         'SAY' {
             if (-not [string]::IsNullOrWhiteSpace($argument)) {
                 $synth.SpeakAsyncCancelAll()
                 $null = $synth.SpeakAsync($argument)
             }
         }
-        'VOICE' { Set-Voice $argument }
         'RATE' {
             $parsed = 0
             if ([int]::TryParse($argument, [ref]$parsed)) {
@@ -72,7 +89,7 @@ function Handle-Command([string]$line) {
 }
 
 try {
-    Set-Voice ''
+    Set-DefaultVoice
     [Console]::Out.WriteLine('READY')
     [Console]::Out.Flush()
     while ($null -ne ($line = [Console]::In.ReadLine())) {

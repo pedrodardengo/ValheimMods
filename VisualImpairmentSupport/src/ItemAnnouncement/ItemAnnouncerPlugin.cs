@@ -9,10 +9,7 @@ namespace ItemAnnouncer
         internal static ManualLogSource Log;
 
         internal static ConfigEntry<bool> Ativar;
-        internal static ConfigEntry<bool> FalarCliqueMeio;
         internal static ConfigEntry<string> Formato;
-        internal static ConfigEntry<bool> AnunciarTotal;
-        internal static ConfigEntry<string> FormatoComTotal;
         internal static ConfigEntry<string> Voz;
         internal static ConfigEntry<int> Velocidade;
         internal static ConfigEntry<int> Volume;
@@ -23,37 +20,31 @@ namespace ItemAnnouncer
             _config = host.Config;
             Log = logger;
 
-            Ativar = host.Config.Bind("1 - Geral", "Ativar", true,
-                "Ativar ou desativar os anuncios por voz.");
+            Ativar = host.Config.Bind("Voice", "Enabled", true,
+                "Enable or disable voice announcements.");
 
-            FalarCliqueMeio = host.Config.Bind("1 - Geral", "FalarCliqueMeio", true,
-                "Falar ao clicar com o botao do meio (M3) sobre um item no inventario.");
+            Formato = host.Config.Bind("Voice", "Text", "{name}: {count}",
+                "Spoken text. Placeholders: {name} = item name, {count} = stack quantity.");
 
-            Formato = host.Config.Bind("2 - Texto", "Formato", "{name}: {count}",
-                "Texto falado. Placeholders: {name} = nome do item, {count} = quantidade na pilha.");
+            string[] voiceOptions = TtsClient.GetAvailableVoices(logger);
+            Voz = host.Config.Bind("Voice", "Speech voice", TtsClient.AutomaticVoice,
+                new ConfigDescription(
+                    "Select an installed Windows speech voice. Automatic prefers Portuguese (Brazil), then uses the system default.",
+                    new AcceptableValueList<string>(voiceOptions)));
 
-            AnunciarTotal = host.Config.Bind("2 - Texto", "AnunciarTotal", false,
-                "Se verdadeiro, usa o FormatoComTotal (inclui a quantidade total do item no inventario/container).");
+            Velocidade = host.Config.Bind("Voice", "Speed", 0,
+                new ConfigDescription("Speech speed, from -10 (slow) to 10 (fast).", new AcceptableValueRange<int>(-10, 10)));
 
-            FormatoComTotal = host.Config.Bind("2 - Texto", "FormatoComTotal", "{name}: {count}, total {total}",
-                "Texto falado quando AnunciarTotal esta ligado. Placeholders: {name}, {count}, {total}.");
+            Volume = host.Config.Bind("Voice", "Volume", 100,
+                new ConfigDescription("Speech volume, from 0 to 100.", new AcceptableValueRange<int>(0, 100)));
 
-            Voz = host.Config.Bind("3 - Voz", "Voz", "",
-                "Nome (ou parte do nome) da voz do Windows. Vazio = usa uma voz pt-BR automaticamente.");
-
-            Velocidade = host.Config.Bind("3 - Voz", "Velocidade", 0,
-                "Velocidade da fala, de -10 (devagar) a 10 (rapido).");
-
-            Volume = host.Config.Bind("3 - Voz", "Volume", 100,
-                "Volume da fala, de 0 a 100.");
-
-            TtsClient.Initialize(Log, Voz.Value, Velocidade.Value, Volume.Value);
+            TtsClient.Initialize(Log, Velocidade.Value, Volume.Value, Voz.Value);
             _config.SettingChanged += OnSettingChanged;
         }
 
         private static void OnSettingChanged(object sender, SettingChangedEventArgs e)
         {
-            TtsClient.ApplySettings(Voz.Value, Velocidade.Value, Volume.Value);
+            TtsClient.ApplySettings(Velocidade.Value, Volume.Value, Voz.Value);
         }
 
         internal static void Shutdown()

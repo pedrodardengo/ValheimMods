@@ -23,7 +23,7 @@ namespace ItemAnnouncer
                     return;
                 }
 
-                string text = BuildText(grid, item);
+                string text = BuildText(item);
                 if (string.IsNullOrWhiteSpace(text))
                 {
                     return;
@@ -48,26 +48,13 @@ namespace ItemAnnouncer
             }
         }
 
-        private static string BuildText(InventoryGrid grid, ItemDrop.ItemData item)
+        private static string BuildText(ItemDrop.ItemData item)
         {
             string name = GetItemName(item);
-            bool stackable = item.m_shared.m_maxStackSize > 1;
-
-            if (!stackable)
-            {
-                return Format(Plugin.Formato.Value, name, 1, 1);
-            }
-
-            if (Plugin.AnunciarTotal != null && Plugin.AnunciarTotal.Value)
-            {
-                int total = GetTotal(grid, item);
-                return Format(Plugin.FormatoComTotal.Value, name, item.m_stack, total);
-            }
-
-            return Format(Plugin.Formato.Value, name, item.m_stack, item.m_stack);
+            return Format(Plugin.Formato.Value, name, item.m_stack);
         }
 
-        private static string Format(string template, string name, int count, int total)
+        private static string Format(string template, string name, int count)
         {
             if (string.IsNullOrWhiteSpace(template))
             {
@@ -76,34 +63,7 @@ namespace ItemAnnouncer
 
             return template
                 .Replace("{name}", name)
-                .Replace("{count}", count.ToString())
-                .Replace("{total}", total.ToString());
-        }
-
-        private static int GetTotal(InventoryGrid grid, ItemDrop.ItemData item)
-        {
-            try
-            {
-                Inventory inventory = grid != null ? grid.GetInventory() : null;
-                if (inventory == null)
-                {
-                    return item.m_stack;
-                }
-
-                int total = 0;
-                foreach (ItemDrop.ItemData other in inventory.GetAllItems())
-                {
-                    if (other != null && other.m_shared != null && other.m_shared.m_name == item.m_shared.m_name)
-                    {
-                        total += other.m_stack;
-                    }
-                }
-                return total;
-            }
-            catch
-            {
-                return item.m_stack;
-            }
+                .Replace("{count}", count.ToString());
         }
 
         private static string GetItemName(ItemDrop.ItemData item)

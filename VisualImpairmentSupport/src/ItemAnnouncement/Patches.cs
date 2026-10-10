@@ -10,7 +10,7 @@ namespace ItemAnnouncer
         [HarmonyPostfix]
         private static void Postfix(InventoryGui __instance)
         {
-            if (Plugin.FalarCliqueMeio == null || !Plugin.FalarCliqueMeio.Value || !Input.GetMouseButtonDown(2))
+            if (!Input.GetMouseButtonDown(2))
             {
                 return;
             }

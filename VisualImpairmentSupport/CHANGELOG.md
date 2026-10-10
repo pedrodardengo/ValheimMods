@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.2.1 - 2026-10-10
+
+### Added
+
+- Added a live ConfigurationManager color preview for the RGB outline sliders.
+- Added a dropdown of installed Windows speech voices, labeled with their locale.
+
+## 1.2.0 - 2026-10-10
+
+### Added
+
+- Added separate red, green, and blue sliders (0-255) for important item outlines.
+- Put voice activation, spoken text, speed, and volume together under the English `Voice` category.
+
+### Removed
+
+- Removed the optional total item count, manual voice selection, and separate middle-click toggle.
+
 ## 1.1.2 - 2026-10-09
 
 ### Removed
