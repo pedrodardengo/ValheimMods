@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('TrueWeatherSwamp', 'VisualImpairmentSupport', 'All')]
+    [ValidateSet('TrueWeatherSwamp', 'VisualImpairmentSupport', 'ExtraBuildMaterialsDrop', 'All')]
     [string]$Mod,
 
     [string]$ValheimDir,
@@ -114,7 +114,7 @@ function Invoke-ModPackage([string]$modName, [string]$dotnetPath) {
 
 $dotnet = Find-DotNet
 $modsToPackage = if ($Mod -eq 'All') {
-    @('TrueWeatherSwamp', 'VisualImpairmentSupport')
+    @('TrueWeatherSwamp', 'VisualImpairmentSupport', 'ExtraBuildMaterialsDrop')
 }
 else {
     @($Mod)

@@ -1,0 +1,9 @@
+{
+  "name": "ExtraBuildMaterialsDrop",
+  "version_number": "1.1.0",
+  "website_url": "https://github.com/pedrodardengo/ValheimMods/tree/master/ExtraBuildMaterialsDrop",
+  "description": "Configurable wood and stone drops from trees and rocks, overriding the world resource modifier for those materials.",
+  "dependencies": [
+    "denikson-BepInExPack_Valheim-5.4.2202"
+  ]
+}
